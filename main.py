@@ -34,6 +34,8 @@ if __name__ == '__main__':
     if not os.path.exists("userData.json"):
         print("ERROR: 'userData.json' Not Found!")
         sys.exit(1)
+    elif os.path.getsize("userData.json") == 0:
+        print("WARNING: 'userData.json' is Empty!")
     
     # Load json files
     with open('morn.json', 'r', encoding='utf-8') as f:
@@ -48,3 +50,13 @@ if __name__ == '__main__':
     # print(f'{G}INFO{E}: ', noon)
     # sys.exit(0)
     # ---- debug ----
+
+    # Input Token and update POST header
+    token = input("token:")
+    if not token.startswith('Bearer '):
+        print("ERROE: Wrong Token Format!")
+        print("INFO: It should be 'Bearer xxxxxx'")
+        sys.exit(1)
+    hd['Authorization'] = token
+
+    print(token) # debug
