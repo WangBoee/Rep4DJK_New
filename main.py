@@ -8,6 +8,8 @@
 import os
 import sys
 import json
+import time
+import random
 import requests
 import datetime
 
@@ -87,8 +89,54 @@ if __name__ == '__main__':
         sys.exit(1)
     hd['Authorization'] = token
 
-    # print(token) # debug
+# Change POST body
+def changeBody(body, lst):
+    body['userId'] = lst[0]
+    body['atProvince'] = lst[1]
+    body['atCity'] = lst[2]
+    body['atDistrict'] = lst[3]
+    body['userLocation'] = str(lst[4])
+    return body
 
-    for u in uList:
-        userData=getUserChangeData(u,token)
-        # print(userData) # debug
+for n in range(len(uList)):
+        u = random.sample(uList.keys(), 1)[0]  # py3.9 throw WARNNING
+        print(f'INFO: Id:{u}, Name:{uList[u]["name"]}')
+        # Get user info
+        it = getUserChangeData(u, token)
+        if it is None: # POST error
+            print(f'ERROR: POST ERROR')
+            del uList[u] # Del from user list
+        elif it == 1: # Reported
+            print(f'ERROR: Reported')
+            del uList[u]
+        else: # Normal
+            if it[-1] != '1':  # user location is incorrect
+                print(f"ERROR: user location error, ID:", u)
+                del uList[u]
+                continue
+            else:
+                print(f"INFO: ready to report!")
+                # delay [2.0,5.0)s for each report
+                delay = random.uniform(0.5, 2.0)
+                time.sleep(delay)
+                # remove user in dict if reported
+                del uList[u]
+            morn = changeBody(morn, it)
+            noon = changeBody(noon, it)
+            # Dump post body
+            body_morning = json.dumps(morn).encode('utf-8')
+            body_afternoon = json.dumps(noon).encode('utf-8')
+            # POST for morning
+            report_morn = requests.post(url, data=body_morning, headers=hd)
+            tm = time.localtime()
+            # POST for afternoon is opened after 11:58
+            if tm.tm_hour < 11:
+                print(f"INFO: H<11")
+                continue
+            elif tm.tm_hour == 11 and tm.tm_min < 58:
+                print(f"INFO: H=11 & M<58")
+                continue
+            # Pause 1s for afternoon POST
+            time.sleep(1)
+            # POST for morning
+            report_noon = requests.post(url, data=body_afternoon, headers=hd)
