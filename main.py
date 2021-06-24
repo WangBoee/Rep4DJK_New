@@ -13,6 +13,12 @@ import random
 import requests
 import datetime
 
+# Colors
+R = "\033[0;31m"  # Red
+G = "\033[0;32m"  # Green
+Y = "\033[0;33m"  # Yellow
+E = "\033[0m"  # Reset default
+
 # POST API
 url = 'https://gkdapp.strongmap.cn:9045/api/healthReportDd/add'
 
@@ -30,6 +36,8 @@ hd = {
 }
 
 # Get user data
+
+
 def getUserChangeData(useid, token):
     # API
     get_url = 'https://gkdapp.strongmap.cn:9045/api/healthReportDd/getNewByUser'
@@ -37,6 +45,10 @@ def getUserChangeData(useid, token):
     header = hd
     data = json.dumps({"userId": useid}).encode('utf-8')
     result = requests.post(url=get_url, data=data, headers=header)
+
+    # Print POST info
+    print(f'{R}ERROR{E}: getUserChangeData: {result.status_code}')
+    print(f'{R}ERROR{E}: getUserChangeData: {result.text}')
 
     # POST ERROR
     if result.status_code != 201:
@@ -53,20 +65,22 @@ def getUserChangeData(useid, token):
     # Reported
     if today == now:
         return 1
+    print(f'{G}INFO{E}: {atProvince} {atCity} {atDistrict} {userLocation} {today} {backSchoolTime}')
     # Return a list contains user data
     return [useid, atProvince, atCity, atDistrict, userLocation]
+
 
 if __name__ == '__main__':
     # Check Files
     if not os.path.exists("noon.json") or not os.path.exists("morn.json"):
-        print("ERROR: 'morn.json' or 'noon.json' Not Found")
+        print(f"{R}ERROR{E}: 'morn.json' or 'noon.json' Not Found")
         sys.exit(1)
     if not os.path.exists("userData.json"):
-        print("ERROR: 'userData.json' Not Found!")
+        print(f"{R}ERROR{E}: 'userData.json' Not Found!")
         sys.exit(1)
     elif os.path.getsize("userData.json") == 0:
-        print("WARNING: 'userData.json' is Empty!")
-    
+        print(f"{Y}WARNING{R}: 'userData.json' is Empty!")
+
     # Load json files
     with open('morn.json', 'r', encoding='utf-8') as f:
         morn = json.load(f)
@@ -84,12 +98,14 @@ if __name__ == '__main__':
     # Input Token and update POST header
     token = input("token:")
     if not token.startswith('Bearer '):
-        print("ERROE: Wrong Token Format!")
-        print("INFO: It should be 'Bearer xxxxxx'")
+        print(f"{R}ERROE{E}: Wrong Token Format!")
+        print(f"{G}INFO{E}: It should be 'Bearer xxxxxx'")
         sys.exit(1)
     hd['Authorization'] = token
 
 # Change POST body
+
+
 def changeBody(body, lst):
     body['userId'] = lst[0]
     body['atProvince'] = lst[1]
@@ -98,45 +114,53 @@ def changeBody(body, lst):
     body['userLocation'] = str(lst[4])
     return body
 
+
 for n in range(len(uList)):
-        u = random.sample(uList.keys(), 1)[0]  # py3.9 throw WARNNING
-        print(f'INFO: Id:{u}, Name:{uList[u]["name"]}')
-        # Get user info
-        it = getUserChangeData(u, token)
-        if it is None: # POST error
-            print(f'ERROR: POST ERROR')
-            del uList[u] # Del from user list
-        elif it == 1: # Reported
-            print(f'ERROR: Reported')
+    u = random.sample(uList.keys(), 1)[0]  # py3.9 throw WARNNING
+    print(f'{G}INFO{E}: Id:{u}, Name:{uList[u]["name"]}')
+    # Get user info
+    it = getUserChangeData(u, token)
+    if it is None:  # POST error
+        print(f'{R}ERROR{E}: POST ERROR')
+        del uList[u]  # Del from user list
+    elif it == 1:  # Reported
+        print(f'{R}ERROR{E}: Reported')
+        del uList[u]
+    else:  # Normal
+        if it[-1] != '1':  # user location is incorrect
+            print(f"{R}ERROR{E}: user location error, ID:{u}")
             del uList[u]
-        else: # Normal
-            if it[-1] != '1':  # user location is incorrect
-                print(f"ERROR: user location error, ID:", u)
-                del uList[u]
-                continue
-            else:
-                print(f"INFO: ready to report!")
-                # delay [2.0,5.0)s for each report
-                delay = random.uniform(0.5, 2.0)
-                time.sleep(delay)
-                # remove user in dict if reported
-                del uList[u]
-            morn = changeBody(morn, it)
-            noon = changeBody(noon, it)
-            # Dump post body
-            body_morning = json.dumps(morn).encode('utf-8')
-            body_afternoon = json.dumps(noon).encode('utf-8')
-            # POST for morning
-            report_morn = requests.post(url, data=body_morning, headers=hd)
-            tm = time.localtime()
-            # POST for afternoon is opened after 11:58
-            if tm.tm_hour < 11:
-                print(f"INFO: H<11")
-                continue
-            elif tm.tm_hour == 11 and tm.tm_min < 58:
-                print(f"INFO: H=11 & M<58")
-                continue
-            # Pause 1s for afternoon POST
-            time.sleep(1)
-            # POST for morning
-            report_noon = requests.post(url, data=body_afternoon, headers=hd)
+            continue
+        else:
+            print(f"{G}INFO{E}: ready to report!")
+            # delay [2.0,5.0)s for each report
+            delay = random.uniform(0.5, 2.0)
+            print(f"{G}INFO{E}: delay {delay}s")
+            time.sleep(delay)
+            # remove user in dict if reported
+            del uList[u]
+        morn = changeBody(morn, it)
+        noon = changeBody(noon, it)
+        # Dump post body
+        body_morning = json.dumps(morn).encode('utf-8')
+        body_afternoon = json.dumps(noon).encode('utf-8')
+        # POST for morning
+        report_morn = requests.post(url, data=body_morning, headers=hd)
+        print(f'{G}INFO{E}: {report_morn.status_code}')
+        print(f'{G}INFO{E}: {report_morn.text}')
+        tm = time.localtime()
+        # POST for afternoon is opened after 11:58
+        if tm.tm_hour < 11:
+            print(f"{G}INFO{E}: H<11")
+            continue
+        elif tm.tm_hour == 11 and tm.tm_min < 58:
+            print(f"{G}INFO{E}: H=11 & M<58")
+            continue
+        # Pause 1s for afternoon POST
+        time.sleep(1)
+        # POST for morning
+        report_noon = requests.post(url, data=body_afternoon, headers=hd)
+        print(f'{G}INFO{E}: {report_noon.status_code}')
+        print(f'{G}INFO{E}: {report_noon.text}')
+
+print(f"{G}INFO{E}: All done.")
