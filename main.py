@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import requests
+import datetime
 
 # POST API
 url = 'https://gkdapp.strongmap.cn:9045/api/healthReportDd/add'
@@ -25,6 +26,33 @@ hd = {
     'Referer': 'https://servicewechat.com/wxe9c88300c9903b6d/55/page-frame.html',
     'Accept-Encoding': 'gzip, deflate, br',
 }
+
+# Get user data
+def getUserChangeData(useid, token):
+    # API
+    get_url = 'https://gkdapp.strongmap.cn:9045/api/healthReportDd/getNewByUser'
+    hd['Authorization'] = token
+    header = hd
+    data = json.dumps({"userId": useid}).encode('utf-8')
+    result = requests.post(url=get_url, data=data, headers=header)
+
+    # POST ERROR
+    if result.status_code != 201:
+        return None
+
+    jdat = result.json()
+    atProvince = jdat["atProvince"]
+    atCity = jdat["atCity"]
+    atDistrict = jdat["atDistrict"]
+    userLocation = jdat["userLocation"]
+    today = jdat["reportTime"][:11].strip()
+    backSchoolTime = jdat["backSchoolTime"]
+    now = str(datetime.date.today()).strip()
+    # Reported
+    if today == now:
+        return 1
+    # Return a list contains user data
+    return [useid, atProvince, atCity, atDistrict, userLocation]
 
 if __name__ == '__main__':
     # Check Files
@@ -59,4 +87,8 @@ if __name__ == '__main__':
         sys.exit(1)
     hd['Authorization'] = token
 
-    print(token) # debug
+    # print(token) # debug
+
+    for u in uList:
+        userData=getUserChangeData(u,token)
+        # print(userData) # debug
